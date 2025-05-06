@@ -16,32 +16,19 @@ class Rootway < Formula
   def post_install
     python = Formula["python@3.12"].opt_bin/"python3"
     
-    # Sprawdzamy, czy jest dostępny moduł venv
+    # Sprawdzenie, czy moduł venv jest dostępny
     unless system(python, "-m", "venv", "--help", out: File::NULL, err: File::NULL)
-      opoo <<~EOS
-        Wygląda na to, że Python nie ma modułu venv!
-        Sprawdzamy, czy masz zainstalowany pakiet python3.12-venv:
-          sudo apt install python3.12-venv
-        Następnie wykonaj:
-          brew postinstall rootway
-      EOS
-
-      # Sprawdzamy, czy system może zainstalować brakujący pakiet
-      if system("which apt")
-        ohai "Instalowanie brakującego pakietu python3.12-venv"
-        system("sudo apt install python3.12-venv")
-        return
-      else
-        opoo "Nie wykryto menedżera pakietów apt. Musisz zainstalować python3.12-venv ręcznie."
-      end
-
-      # Zatrzymujemy proces, aby użytkownik mógł zainstalować brakujący pakiet
+      opoo "Wygląda na to, że Python nie ma modułu venv!"
+      opoo "Instalowanie brakującego pakietu python3.12-venv..."
+      
+      # Automatyczne zainstalowanie brakującego pakietu venv
+      system "sudo", "apt", "install", "-y", "python3.12-venv"
+      # Uruchomienie ponownie postinstall
+      system "brew", "postinstall", "rootway"
       return
     end
 
-    # Tworzymy środowisko wirtualne
     system python, "-m", "venv", "#{prefix}/venv"
-    # Instalujemy wymagane pakiety
     system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
   end
 
