@@ -10,12 +10,6 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
-    # Tutaj NIE robisz unzipa!
-    # Homebrew już samo rozpakowuje plik ZIP
-
-    # Pliki są w podfolderze "rootway-agent", więc trzeba je przenieść
-    cd "rootway-agent" do
-      bin.install "rootway" if File.exist?("rootway")
       prefix.install Dir["*"]
     end
   end
