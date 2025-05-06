@@ -18,8 +18,9 @@ class Rootway < Formula
     python = Formula["python@3.12"].opt_bin/"python3"
 
     # Sprawdzamy, czy moduł venv jest dostępny
-    unless system(python, "-m", "venv", "--help")
-      opoo <<~EOS
+    puts "Sprawdzanie dostępności modułu venv..."
+    unless system(python, "-m", "venv", "--help", err: :out)
+      warn <<~EOS
         Moduł venv nie jest dostępny dla Pythona 3.12!
         Spróbujemy go zainstalować...
       EOS
@@ -51,7 +52,7 @@ class Rootway < Formula
 
     # Tworzymy środowisko wirtualne
     venv_path = prefix/"venv"
-    ohai "Tworzenie środowiska wirtualnego w #{venv_path}..."
+    puts "Tworzenie środowiska wirtualnego w #{venv_path}..."
     unless system(python, "-m", "venv", venv_path, err: :out)
       onoe <<~EOS
         Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
@@ -64,7 +65,7 @@ class Rootway < Formula
     # Instalujemy zależności z requirements.txt
     pip = venv_path/"bin/pip"
     requirements = prefix/"requirements.txt"
-    ohai "Sprawdzanie, czy plik requirements.txt istnieje..."
+    puts "Sprawdzanie, czy plik requirements.txt istnieje..."
     unless File.exist?(requirements)
       onoe <<~EOS
         Plik requirements.txt nie istnieje w #{prefix}!
@@ -74,7 +75,7 @@ class Rootway < Formula
       raise "Brak pliku requirements.txt"
     end
 
-    ohai "Instalowanie zależności z #{requirements}..."
+    puts "Instalowanie zależności z #{requirements}..."
     unless system(pip, "install", "-r", requirements, err: :out)
       onoe <<~EOS
         Nie udało się zainstalować zależności z #{requirements}!
@@ -84,7 +85,7 @@ class Rootway < Formula
       raise "Błąd podczas instalacji zależności"
     end
 
-    ohai "Środowisko wirtualne i zależności zostały pomyślnie zainstalowane."
+    puts "Środowisko wirtualne i zależności zostały pomyślnie zainstalowane."
   end
 
   service do
