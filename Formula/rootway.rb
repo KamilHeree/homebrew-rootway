@@ -1,17 +1,28 @@
 class Rootway < Formula
   desc "Rootway Agent - monitoring serwera i tunel WireGuard"
-  homepage "https://github.com/KamilHeree/rootway-agent"
-  url "https://github.com/KamilHeree/rootway-agent/releases/download/v1.0.0/rootway-agent.zip"
+  homepage "https://github.com/kamilheree/rootway-agent"
+  url "https://github.com/kamilheree/rootway-agent/releases/download/v1.0.0/rootway-agent.zip"
   sha256 "26CDE3F3C6C1591611B6B646D2F8A0F67FD87CFD1EB43F7767C5E830618D3D1C"
   license "MIT"
   version "1.0.0"
 
   depends_on "python@3.12"
-  depends_on "wireguard-tools"
+  depends_on "wireguard-tools" => :optional # Opcjonalne, bo root może być potrzebny do pełnej funkcjonalności
 
   def install
+    # Tworzymy katalog logów w katalogu użytkownika
+    log_dir = "#{ENV["HOME"]}/log"
+    mkdir_p log_dir unless Dir.exist?(log_dir)
+
     # Instalujemy wszystkie pliki z ZIP-a do katalogu prefix
     prefix.install Dir["*"]
+
+    # Generujemy skrypt do uruchomienia agenta z roota
+    (prefix/"run-as-root.sh").write <<~EOS
+      #!/bin/bash
+      sudo #{opt_prefix}/venv/bin/python3 #{opt_prefix}/main.py
+    EOS
+    chmod 0755, prefix/"run-as-root.sh"
   end
 
   def post_install
@@ -20,34 +31,12 @@ class Rootway < Formula
     # Sprawdzamy, czy moduł venv jest dostępny
     puts "Sprawdzanie dostępności modułu venv..."
     unless system(python, "-m", "venv", "--help", err: :out)
-      warn <<~EOS
+      onoe <<~EOS
         Moduł venv nie jest dostępny dla Pythona 3.12!
-        Spróbujemy go zainstalować...
+        Proszę upewnić się, że Python 3.12 jest poprawnie zainstalowany przez Homebrew:
+        `brew reinstall python@3.12`
       EOS
-
-      # Próbujemy zainstalować venv w zależności od systemu
-      if OS.linux?
-        # Debian/Ubuntu
-        if system("which", "apt")
-          system "sudo", "apt", "install", "python3.12-venv", "-y"
-        # CentOS/RHEL
-        elsif system("which", "yum")
-          system "sudo", "yum", "install", "python3.12-venv", "-y"
-        else
-          onoe <<~EOS
-            Nie udało się zainstalować python3.12-venv. Proszę zainstalować go ręcznie i spróbować ponownie.
-            Na przykład na Debian/Ubuntu: `sudo apt install python3.12-venv`
-            Na CentOS/RHEL: `sudo yum install python3.12-venv`
-          EOS
-          raise "Brak wsparcia dla instalacji venv na tym systemie"
-        end
-      else
-        onoe <<~EOS
-          Moduł venv powinien być dostępny w Pythonie zainstalowanym przez Homebrew.
-          Proszę upewnić się, że Python 3.12 jest poprawnie zainstalowany: `brew reinstall python@3.12`
-        EOS
-        raise "Błąd: Moduł venv niedostępny"
-      end
+      raise "Błąd: Moduł venv niedostępny"
     end
 
     # Tworzymy środowisko wirtualne
@@ -56,8 +45,7 @@ class Rootway < Formula
     unless system(python, "-m", "venv", venv_path, err: :out)
       onoe <<~EOS
         Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
-        Sprawdź, czy masz uprawnienia do zapisu w #{prefix} oraz czy Python 3.12 działa poprawnie.
-        Możesz spróbować ręcznie uruchomić komendę: #{python} -m venv #{venv_path}
+        Sprawdź, czy masz uprawnienia do zapisu w #{prefix}.
       EOS
       raise "Błąd podczas tworzenia środowiska wirtualnego"
     end
@@ -70,7 +58,6 @@ class Rootway < Formula
       onoe <<~EOS
         Plik requirements.txt nie istnieje w #{prefix}!
         Proszę upewnić się, że plik requirements.txt znajduje się w paczce ZIP.
-        Możesz sprawdzić zawartość ZIP-a: unzip -l #{prefix}/../rootway-agent.zip
       EOS
       raise "Brak pliku requirements.txt"
     end
@@ -80,19 +67,20 @@ class Rootway < Formula
       onoe <<~EOS
         Nie udało się zainstalować zależności z #{requirements}!
         Sprawdź, czy plik requirements.txt jest poprawny i czy masz dostęp do internetu.
-        Możesz spróbować ręcznie uruchomić komendę: #{pip} install -r #{requirements}
       EOS
       raise "Błąd podczas instalacji zależności"
     end
 
     puts "Środowisko wirtualne i zależności zostały pomyślnie zainstalowane."
+    puts "Aby uruchomić agenta z uprawnieniami roota, wykonaj: sudo #{opt_prefix}/run-as-root.sh"
   end
 
   service do
+    # Usługa jest opcjonalna i wymaga roota do konfiguracji
     run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
     keep_alive true
     working_dir opt_prefix
-    log_path var/"log/rootway.log"
-    error_log_path var/"log/rootway-error.log"
+    log_path "#{ENV["HOME"]}/log/rootway.log"
+    error_log_path "#{ENV["HOME"]}/log/rootway-error.log"
   end
 end
