@@ -10,14 +10,18 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
-    system "unzip", "rootway-agent.zip"
+    system "unzip", "#{cached_download}/rootway-agent.zip"
+    puts "Listing files in the unpacked directory:"
+    system "ls", "-l"
     bin.install "rootway"
     prefix.install Dir["*"]
   end
+  
+  
 
   def post_install
     system "python3", "-m", "venv", "#{prefix}/venv"
-    system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
+    system "#{opt_prefix}/venv/bin/pip", "install", "-r", "#{opt_prefix}/requirements.txt"
   end
 
   service do
