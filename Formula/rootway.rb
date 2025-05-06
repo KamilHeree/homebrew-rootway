@@ -10,8 +10,7 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
-      prefix.install Dir["*"]
-    end
+    prefix.install Dir["*"]
   end
 
   def post_install
