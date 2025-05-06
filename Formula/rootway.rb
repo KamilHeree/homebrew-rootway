@@ -4,24 +4,23 @@ class Rootway < Formula
   url "https://github.com/KamilHeree/rootway-agent/releases/download/v1.0.0/rootway-agent.zip"
   sha256 "7E1418BF3BD4CCB96ACE8F2930FC8B5DDAA125EC115C1C7C67663171695D71AF"
   license "MIT"
-  version "1.0.0" # <--- to musisz DODAĆ!
+  version "1.0.0"
 
   depends_on "python@3.12"
   depends_on "wireguard-tools"
 
   def install
-    # Używamy cached_download, aby wskazać poprawną lokalizację pliku ZIP
-    system "unzip", "#{cached_download}"
-    bin.install "rootway"
-    prefix.install Dir["*"]
+    # Rozpakowanie pliku ZIP w katalogu buildpath
+    system "unzip", "rootway-agent.zip", "-d", buildpath
+
+    # Instalowanie plików
+    bin.install "#{buildpath}/rootway-agent/rootway"
+    prefix.install Dir["#{buildpath}/rootway-agent/*"]
   end
-  
-  
-  
 
   def post_install
     system "python3", "-m", "venv", "#{prefix}/venv"
-    system "#{opt_prefix}/venv/bin/pip", "install", "-r", "#{opt_prefix}/requirements.txt"
+    system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
   end
 
   service do
