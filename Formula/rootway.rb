@@ -10,6 +10,7 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
+    system "unzip", "rootway-agent.zip"
     bin.install "rootway"
     prefix.install Dir["*"]
   end
