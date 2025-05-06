@@ -14,7 +14,9 @@ class Rootway < Formula
   end
 
   def post_install
-    unless system("python3", "-m", "venv", "--help", out: File::NULL, err: File::NULL)
+    python = Formula["python@3.12"].opt_bin/"python3"
+  
+    unless system(python, "-m", "venv", "--help", out: File::NULL, err: File::NULL)
       opoo <<~EOS
         Wygląda na to, że Python nie ma modułu venv!
         Na Debian/Ubuntu wpisz:
@@ -25,9 +27,10 @@ class Rootway < Formula
       return
     end
   
-    system "python3", "-m", "venv", "#{prefix}/venv"
+    system python, "-m", "venv", "#{prefix}/venv"
     system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
   end
+  
   
 
   service do
