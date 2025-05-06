@@ -51,10 +51,12 @@ class Rootway < Formula
 
     # Tworzymy środowisko wirtualne
     venv_path = prefix/"venv"
-    unless system(python, "-m", "venv", venv_path)
+    ohai "Tworzenie środowiska wirtualnego w #{venv_path}..."
+    unless system(python, "-m", "venv", venv_path, err: :out)
       onoe <<~EOS
         Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
-        Proszę upewnić się, że Python 3.12 działa poprawnie i ma uprawnienia do zapisu w #{prefix}.
+        Sprawdź, czy masz uprawnienia do zapisu w #{prefix} oraz czy Python 3.12 działa poprawnie.
+        Możesz spróbować ręcznie uruchomić komendę: #{python} -m venv #{venv_path}
       EOS
       raise "Błąd podczas tworzenia środowiska wirtualnego"
     end
@@ -62,21 +64,27 @@ class Rootway < Formula
     # Instalujemy zależności z requirements.txt
     pip = venv_path/"bin/pip"
     requirements = prefix/"requirements.txt"
+    ohai "Sprawdzanie, czy plik requirements.txt istnieje..."
     unless File.exist?(requirements)
       onoe <<~EOS
         Plik requirements.txt nie istnieje w #{prefix}!
         Proszę upewnić się, że plik requirements.txt znajduje się w paczce ZIP.
+        Możesz sprawdzić zawartość ZIP-a: unzip -l #{prefix}/../rootway-agent.zip
       EOS
       raise "Brak pliku requirements.txt"
     end
 
-    unless system(pip, "install", "-r", requirements)
+    ohai "Instalowanie zależności z #{requirements}..."
+    unless system(pip, "install", "-r", requirements, err: :out)
       onoe <<~EOS
         Nie udało się zainstalować zależności z #{requirements}!
-        Proszę sprawdzić, czy plik requirements.txt jest poprawny i czy masz dostęp do internetu.
+        Sprawdź, czy plik requirements.txt jest poprawny i czy masz dostęp do internetu.
+        Możesz spróbować ręcznie uruchomić komendę: #{pip} install -r #{requirements}
       EOS
       raise "Błąd podczas instalacji zależności"
     end
+
+    ohai "Środowisko wirtualne i zależności zostały pomyślnie zainstalowane."
   end
 
   service do
