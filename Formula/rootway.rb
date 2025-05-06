@@ -2,7 +2,7 @@ class Rootway < Formula
   desc "Rootway Agent - monitoring serwera i tunel WireGuard"
   homepage "https://github.com/KamilHeree/rootway-agent"
   url "https://github.com/KamilHeree/rootway-agent/releases/download/v1.0.0/rootway-agent.zip"
-  sha256 "7E1418BF3BD4CCB96ACE8F2930FC8B5DDAA125EC115C1C7C67663171695D71AF"
+  sha256 "7e1418bf3bd4ccb96ace8f2930fc8b5ddaa125ec115c1c7c67663171695d71af"
   license "MIT"
   version "1.0.0"
 
@@ -10,12 +10,14 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
-    # Rozpakowanie pliku ZIP w katalogu buildpath
-    system "unzip", "rootway-agent.zip", "-d", buildpath
+    # Tutaj NIE robisz unzipa!
+    # Homebrew już samo rozpakowuje plik ZIP
 
-    # Instalowanie plików
-    bin.install "#{buildpath}/rootway-agent/rootway"
-    prefix.install Dir["#{buildpath}/rootway-agent/*"]
+    # Pliki są w podfolderze "rootway-agent", więc trzeba je przenieść
+    cd "rootway-agent" do
+      bin.install "rootway" if File.exist?("rootway")
+      prefix.install Dir["*"]
+    end
   end
 
   def post_install
