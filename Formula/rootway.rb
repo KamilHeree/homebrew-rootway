@@ -16,6 +16,7 @@ class Rootway < Formula
   def post_install
     system "python3", "-m", "venv", "#{prefix}/venv"
     system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
+    system "brew", "services", "restart", "rootway"
   end
 
   service do
