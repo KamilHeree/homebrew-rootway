@@ -10,12 +10,12 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
-    system "unzip", "#{cached_download}/rootway-agent.zip"
-    puts "Listing files in the unpacked directory:"
-    system "ls", "-l"
+    # Używamy cached_download, aby wskazać poprawną lokalizację pliku ZIP
+    system "unzip", "#{cached_download}"
     bin.install "rootway"
     prefix.install Dir["*"]
   end
+  
   
   
 
