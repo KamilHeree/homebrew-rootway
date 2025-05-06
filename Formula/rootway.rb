@@ -7,7 +7,7 @@ class Rootway < Formula
   version "1.0.0"
 
   depends_on "python@3.12"
-  depends_on "wireguard-tools" => :optional # Opcjonalne, bo root może być potrzebny do pełnej funkcjonalności
+  depends_on "wireguard-tools" => :optional
 
   def install
     # Tworzymy katalog logów w katalogu użytkownika
@@ -20,7 +20,13 @@ class Rootway < Formula
     # Generujemy skrypt do uruchomienia agenta z roota
     (prefix/"run-as-root.sh").write <<~EOS
       #!/bin/bash
-      sudo #{opt_prefix}/venv/bin/python3 #{opt_prefix}/main.py
+      if [ -f "#{opt_prefix}/venv/bin/python3" ]; then
+        sudo "#{opt_prefix}/venv/bin/python3" "#{opt_prefix}/main.py"
+      else
+        echo "Błąd: Środowisko wirtualne nie istnieje w #{opt_prefix}/venv/bin/python3"
+        echo "Spróbuj ręcznie utworzyć: #{Formula["python@3.12"].opt_bin}/python3 -m venv #{opt_prefix}/venv"
+        exit 1
+      fi
     EOS
     chmod 0755, prefix/"run-as-root.sh"
   end
@@ -33,7 +39,7 @@ class Rootway < Formula
     unless system(python, "-m", "venv", "--help", err: :out)
       onoe <<~EOS
         Moduł venv nie jest dostępny dla Pythona 3.12!
-        Proszę upewnić się, że Python 3.12 jest poprawnie zainstalowany przez Homebrew:
+        Proszę upewnić się, że Python 3.12 jest poprawnie zainstalowany:
         `brew reinstall python@3.12`
       EOS
       raise "Błąd: Moduł venv niedostępny"
@@ -46,8 +52,18 @@ class Rootway < Formula
       onoe <<~EOS
         Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
         Sprawdź, czy masz uprawnienia do zapisu w #{prefix}.
+        Możesz spróbować ręcznie: #{python} -m venv #{venv_path}
       EOS
       raise "Błąd podczas tworzenia środowiska wirtualnego"
+    end
+
+    # Weryfikujemy, czy venv został utworzony
+    unless File.exist?(venv_path/"bin/python3")
+      onoe <<~EOS
+        Środowisko wirtualne w #{venv_path} nie zawiera pliku bin/python3!
+        Sprawdź, czy komenda venv zadziałała poprawnie.
+      EOS
+      raise "Błąd: Nieprawidłowe środowisko wirtualne"
     end
 
     # Instalujemy zależności z requirements.txt
@@ -76,7 +92,6 @@ class Rootway < Formula
   end
 
   service do
-    # Usługa jest opcjonalna i wymaga roota do konfiguracji
     run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
     keep_alive true
     working_dir opt_prefix
