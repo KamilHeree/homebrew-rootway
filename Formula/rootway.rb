@@ -10,27 +10,75 @@ class Rootway < Formula
   depends_on "wireguard-tools"
 
   def install
+    # Instalujemy wszystkie pliki z ZIP-a do katalogu prefix
     prefix.install Dir["*"]
   end
 
   def post_install
     python = Formula["python@3.12"].opt_bin/"python3"
-  
-    # Sprawdzamy dostępność modułu venv
-    unless system(python, "-m", "venv", "--help", out: File::NULL, err: File::NULL)
+
+    # Sprawdzamy, czy moduł venv jest dostępny
+    unless system(python, "-m", "venv", "--help")
       opoo <<~EOS
-        Wygląda na to, że Python nie ma modułu venv!
+        Moduł venv nie jest dostępny dla Pythona 3.12!
         Spróbujemy go zainstalować...
       EOS
-      # Instalacja brakującego pakietu dla Debian/Ubuntu
-      system "sudo", "apt", "install", "python3.12-venv", "-y"
+
+      # Próbujemy zainstalować venv w zależności od systemu
+      if OS.linux?
+        # Debian/Ubuntu
+        if system("which", "apt")
+          system "sudo", "apt", "install", "python3.12-venv", "-y"
+        # CentOS/RHEL
+        elsif system("which", "yum")
+          system "sudo", "yum", "install", "python3.12-venv", "-y"
+        else
+          onoe <<~EOS
+            Nie udało się zainstalować python3.12-venv. Proszę zainstalować go ręcznie i spróbować ponownie.
+            Na przykład na Debian/Ubuntu: `sudo apt install python3.12-venv`
+            Na CentOS/RHEL: `sudo yum install python3.12-venv`
+          EOS
+          raise "Brak wsparcia dla instalacji venv na tym systemie"
+        end
+      else
+        onoe <<~EOS
+          Moduł venv powinien być dostępny w Pythonie zainstalowanym przez Homebrew.
+          Proszę upewnić się, że Python 3.12 jest poprawnie zainstalowany: `brew reinstall python@3.12`
+        EOS
+        raise "Błąd: Moduł venv niedostępny"
+      end
     end
-  
-    # Po instalacji 'venv' tworzymy środowisko
-    system python, "-m", "venv", "#{prefix}/venv"
-    system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
+
+    # Tworzymy środowisko wirtualne
+    venv_path = prefix/"venv"
+    unless system(python, "-m", "venv", venv_path)
+      onoe <<~EOS
+        Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
+        Proszę upewnić się, że Python 3.12 działa poprawnie i ma uprawnienia do zapisu w #{prefix}.
+      EOS
+      raise "Błąd podczas tworzenia środowiska wirtualnego"
+    end
+
+    # Instalujemy zależności z requirements.txt
+    pip = venv_path/"bin/pip"
+    requirements = prefix/"requirements.txt"
+    unless File.exist?(requirements)
+      onoe <<~EOS
+        Plik requirements.txt nie istnieje w #{prefix}!
+        Proszę upewnić się, że plik requirements.txt znajduje się w paczce ZIP.
+      EOS
+      raise "Brak pliku requirements.txt"
+    end
+
+    unless system(pip, "install", "-r", requirements)
+      onoe <<~EOS
+        Nie udało się zainstalować zależności z #{requirements}!
+        Proszę sprawdzić, czy plik requirements.txt jest poprawny i czy masz dostęp do internetu.
+      EOS
+      raise "Błąd podczas instalacji zależności"
+    end
   end
-  
+
   service do
     run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
     keep_alive true
