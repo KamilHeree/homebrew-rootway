@@ -14,10 +14,21 @@ class Rootway < Formula
   end
 
   def post_install
+    unless system("python3", "-m", "venv", "--help", out: File::NULL, err: File::NULL)
+      opoo <<~EOS
+        Wygląda na to, że Python nie ma modułu venv!
+        Na Debian/Ubuntu wpisz:
+          sudo apt install python3.12-venv
+        Następnie wykonaj:
+          brew postinstall rootway
+      EOS
+      return
+    end
+  
     system "python3", "-m", "venv", "#{prefix}/venv"
     system "#{prefix}/venv/bin/pip", "install", "-r", "#{prefix}/requirements.txt"
-    system "brew", "services", "restart", "rootway"
   end
+  
 
   service do
     run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
