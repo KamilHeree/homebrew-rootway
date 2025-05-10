@@ -10,153 +10,48 @@ class Rootway < Formula
   depends_on "wireguard-tools" => :optional
 
   def install
-    # Tworzymy katalog logów w katalogu użytkownika
-    log_dir = "#{ENV["HOME"]}/log"
-    puts "Tworzenie katalogu logów w #{log_dir}..."
-    mkdir_p log_dir unless Dir.exist?(log_dir)
-    unless Dir.exist?(log_dir)
-      onoe <<~EOS
-        Nie udało się utworzyć katalogu logów w #{log_dir}!
-        Upewnij się, że masz uprawnienia do zapisu w katalogu domowym.
-      EOS
-      raise "Błąd: Nie można utworzyć katalogu logów"
-    end
+    # Tworzenie katalogu logów w standardowej lokalizacji Homebrew
+    (var/"log").mkpath
 
-    # Instalujemy wszystkie pliki z ZIP-a do katalogu prefix
-    puts "Instalowanie plików z ZIP-a do #{prefix}..."
+    # Instalacja plików
     prefix.install Dir["*"]
-
-    # Generujemy skrypt do uruchomienia agenta z roota
-    puts "Generowanie skryptu run-as-root.sh..."
-    (prefix/"run-as-root.sh").write <<~EOS
-      #!/bin/bash
-      if [ -f "#{prefix}/venv/bin/python3" ]; then
-        sudo "#{prefix}/venv/bin/python3" "#{prefix}/main.py"
-      else
-        echo "Błąd: Środowisko wirtualne nie istnieje w #{prefix}/venv/bin/python3"
-        echo "Spróbuj ponownie zainstalować: brew reinstall kamilheree/rootway/rootway"
-        echo "Lub utwórz środowisko ręcznie: #{Formula["python@3.12"].opt_bin}/python3 -m venv #{prefix}/venv"
-        echo "A następnie zainstaluj zależności: #{prefix}/venv/bin/pip install -r #{prefix}/requirements.txt"
-        exit 1
-      fi
-    EOS
-    chmod 0755, prefix/"run-as-root.sh"
+    
+    # Poprawiona ścieżka dla skryptu
+    bin.install "webserver.py" => "rootway"
+    chmod 0755, bin/"rootway"
   end
 
   def post_install
+    venv_path = opt_prefix/"venv"
     python = Formula["python@3.12"].opt_bin/"python3"
 
-    # Sprawdzamy wersję Pythona i dostępność
-    puts "Sprawdzanie Pythona 3.12 w #{python}..."
-    unless system(python, "--version", err: :out)
-      onoe <<~EOS
-        Python 3.12 nie jest poprawnie zainstalowany w #{python}!
-        Spróbuj reinstalować Pythona:
-        `brew reinstall python@3.12`
-      EOS
-      raise "Błąd: Python 3.12 niedostępny"
-    end
+    # Tworzenie venv z poprawionymi ścieżkami
+    system python, "-m", "venv", venv_path.to_s
 
-    # Sprawdzamy, czy moduł venv jest dostępny
-    puts "Sprawdzanie dostępności modułu venv..."
-    unless system(python, "-m", "venv", "--help", err: :out)
-      onoe <<~EOS
-        Moduł venv nie jest dostępny dla Pythona 3.12!
-        Upewnij się, że Python 3.12 jest poprawnie zainstalowany:
-        `brew reinstall python@3.12`
-        Jeśli problem persistsuje, sprawdź dokumentację Pythona dla Twojego systemu.
-      EOS
-      raise "Błąd: Moduł venv niedostępny"
-    end
-
-    # Tworzymy środowisko wirtualne
-    venv_path = prefix/"venv"
-    puts "Tworzenie środowiska wirtualnego w #{venv_path}..."
-    unless system(python, "-m", "venv", venv_path, err: :out)
-      onoe <<~EOS
-        Nie udało się utworzyć środowiska wirtualnego w #{venv_path}!
-        Upewnij się, że masz uprawnienia do zapisu w #{prefix}.
-        Możesz spróbować ręcznie:
-        1. #{python} -m venv #{venv_path}
-        2. Jeśli to nie działa, sprawdź uprawnienia: chmod -R u+w #{prefix}
-        3. Spróbuj ponownie: brew reinstall kamilheree/rootway/rootway
-      EOS
-      raise "Błąd podczas tworzenia środowiska wirtualnego"
-    end
-
-    # Weryfikujemy, czy venv został utworzony
-    puts "Weryfikacja środowiska wirtualnego..."
-    unless File.exist?(venv_path/"bin/python3")
-      onoe <<~EOS
-        Środowisko wirtualne w #{venv_path} nie zawiera pliku bin/python3!
-        Coś poszło nie tak podczas tworzenia środowiska wirtualnego.
-        Spróbuj ręcznie:
-        1. #{python} -m venv #{venv_path}
-        2. Sprawdź uprawnienia: chmod -R u+w #{prefix}
-        3. Spróbuj ponownie: brew reinstall kamilheree/rootway/rootway
-      EOS
-      raise "Błąd: Nieprawidłowe środowisko wirtualne"
-    end
-
-    # Instalujemy zależności z requirements.txt
-    pip = venv_path/"bin/pip"
-    requirements = prefix/"requirements.txt"
-    puts "Sprawdzanie, czy plik requirements.txt istnieje..."
-    unless File.exist?(requirements)
-      onoe <<~EOS
-        Plik requirements.txt nie istnieje w #{prefix}!
-        Plik ten powinien znajdować się w paczce ZIP: #{url}
-        Sprawdź zawartość ZIP-a:
-        1. Pobierz ZIP: curl -L #{url} -o rootway-agent.zip
-        2. Sprawdź pliki: unzip -l rootway-agent.zip
-        Jeśli plik requirements.txt nie istnieje, skontaktuj się z twórcą pakietu.
-      EOS
-      raise "Brak pliku requirements.txt"
-    end
-
-    puts "Instalowanie zależności z #{requirements}..."
-    unless system(pip, "install", "-r", requirements, err: :out)
-      onoe <<~EOS
-        Nie udało się zainstalować zależności z #{requirements}!
-        Możliwe przyczyny:
-        1. Plik requirements.txt zawiera nieprawidłowe zależności.
-        2. Brak dostępu do internetu.
-        Spróbuj ręcznie:
-        1. #{pip} install -r #{requirements}
-        2. Sprawdź połączenie internetowe.
-        3. Sprawdź zawartość pliku: cat #{requirements}
-        4. Spróbuj ponownie: brew reinstall kamilheree/rootway/rootway
-      EOS
-      raise "Błąd podczas instalacji zależności"
-    end
-
-    puts "Środowisko wirtualne i zależności zostały pomyślnie zainstalowane."
-    puts "Aby uruchomić agenta z uprawnieniami roota, wykonaj:"
-    puts "  sudo #{prefix}/run-as-root.sh"
-    puts "Upewnij się, że użytkownik ma uprawnienia sudo (sprawdź: sudo -l)."
+    # Instalacja zależności
+    system venv_path/"bin/pip", "install", "-r", opt_prefix/"requirements.txt"
   end
 
   service do
-    run [prefix/"venv/bin/python3", prefix/"main.py"]
+    run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
     keep_alive true
-    working_dir prefix
-    log_path "#{ENV["HOME"]}/log/rootway.log"
-    error_log_path "#{ENV["HOME"]}/log/rootway-error.log"
+    working_dir opt_prefix
+    log_path var/"log/rootway.log"
+    error_log_path var/"log/rootway-error.log"
+    environment_variables PATH: std_service_path_env
   end
 
   def caveats
     <<~EOS
-      Rootway Agent został zainstalowany pomyślnie.
+      Uruchom agenta komendą:
+        brew services start rootway
 
-      Aby uruchomić agenta z uprawnieniami roota, wykonaj:
-        sudo #{prefix}/run-as-root.sh
+      Logi znajdziesz w:
+        #{var}/log/rootway.log
+        #{var}/log/rootway-error.log
 
-      Upewnij się, że:
-      1. Masz uprawnienia sudo (sprawdź: `sudo -l`).
-      2. WireGuard (jeśli używany) jest poprawnie skonfigurowany, co może wymagać roota.
-
-      Jeśli instalacja nie powiodła się, sprawdź komunikaty w terminalu i postępuj zgodnie z instrukcjami.
-      W razie problemów skontaktuj się z twórcą pakietu: https://github.com/kamilheree/rootway-agent
+      Konfiguracja WireGuard:
+        Edytuj plik: #{etc}/wireguard/wg0.conf
     EOS
   end
 end
