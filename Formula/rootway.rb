@@ -10,26 +10,24 @@ class Rootway < Formula
   depends_on "wireguard-tools" => :optional
 
   def install
-    # Tworzenie katalogu logów w standardowej lokalizacji Homebrew
-    (var/"log").mkpath
-
-    # Instalacja plików
+    # Automatyczna instalacja wszystkich plików
     prefix.install Dir["*"]
     
-    # Poprawiona ścieżka dla skryptu
-    bin.install "webserver.py" => "rootway"
-    chmod 0755, bin/"rootway"
+    # Utwórz katalogi systemowe
+    (var/"log").mkpath
+    (etc/"wireguard").mkpath
   end
 
   def post_install
-    venv_path = opt_prefix/"venv"
-    python = Formula["python@3.12"].opt_bin/"python3"
-
-    # Tworzenie venv z poprawionymi ścieżkami
-    system python, "-m", "venv", venv_path.to_s
-
-    # Instalacja zależności
-    system venv_path/"bin/pip", "install", "-r", opt_prefix/"requirements.txt"
+    # Automatyczne środowisko wirtualne
+    venv_dir = opt_prefix/"venv"
+    system Formula["python@3.12"].opt_bin/"python3", "-m", "venv", venv_dir
+    system venv_dir/"bin/pip", "install", "-r", opt_prefix/"requirements.txt"
+    
+    # Konfiguracja WireGuard
+    unless (etc/"wireguard/wg0.conf").exist?
+      cp opt_prefix/"wg0.example.conf", etc/"wireguard/wg0.conf"
+    end
   end
 
   service do
@@ -43,15 +41,14 @@ class Rootway < Formula
 
   def caveats
     <<~EOS
-      Uruchom agenta komendą:
+      Agent został zainstalowany. Uruchom komendą:
         brew services start rootway
 
-      Logi znajdziesz w:
+      Logi systemowe:
         #{var}/log/rootway.log
-        #{var}/log/rootway-error.log
 
       Konfiguracja WireGuard:
-        Edytuj plik: #{etc}/wireguard/wg0.conf
+        #{etc}/wireguard/wg0.conf
     EOS
   end
 end
