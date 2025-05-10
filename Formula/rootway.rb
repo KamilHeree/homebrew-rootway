@@ -6,32 +6,40 @@ class Rootway < Formula
   license "MIT"
   version "1.0.0"
 
-  depends_on "flask" => :python
+  depends_on "python@3.12"
   depends_on "wireguard-tools"
 
   def install
     # Instalacja wszystkich plików
     prefix.install Dir["*"]
-    
-    # Utwórz katalogi systemowe
+
+    # Utworzenie wymaganych katalogów
     (var/"log").mkpath
+    (var/"rootway").mkpath
     (prefix/"templates").mkpath
   end
 
   def post_install
-    # Instalacja zależności Python
-    venv_dir = opt_prefix/"venv"
+    venv_dir = var/"rootway/venv"
+
+    # Tworzenie środowiska virtualenv
     system Formula["python@3.12"].opt_bin/"python3", "-m", "venv", venv_dir
-    system venv_dir/"bin/pip", "install", "-r", opt_prefix/"requirements.txt"
-    
-    # Automatyczna konfiguracja WireGuard
-    system "sudo", opt_prefix/"wireguard_setup.py"
+
+    # Instalacja zależności Pythona z logowaniem
+    pip_install_log = var/"log/rootway_pip_install.log"
+    system "#{venv_dir}/bin/pip", "install", "--log", pip_install_log, "-r", opt_prefix/"requirements.txt"
+
+    # Automatyczna konfiguracja WireGuard z logowaniem
+    wireguard_log = var/"log/rootway_wireguard_setup.log"
+    system "sudo", "python3", opt_prefix/"wireguard_setup.py", ">", wireguard_log, "2>&1"
   end
 
   service do
-    run [opt_prefix/"venv/bin/python3", opt_prefix/"main.py"]
+    run [var/"rootway/venv/bin/python3", opt_prefix/"main.py"]
     keep_alive true
     working_dir opt_prefix
+    log_path var/"log/rootway.log"
+    error_log_path var/"log/rootway_error.log"
     environment_variables PATH: std_service_path_env
   end
 
@@ -45,6 +53,9 @@ class Rootway < Formula
 
       Aby uruchomić tunel WireGuard:
         sudo wg-quick up wg0
+
+      Logi instalacji i działania znajdziesz w katalogu:
+        /usr/local/var/log/
     EOS
   end
 end
