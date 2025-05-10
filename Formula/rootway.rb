@@ -2,7 +2,7 @@ class Rootway < Formula
   desc "Rootway Agent - monitoring serwera i tunel WireGuard"
   homepage "https://github.com/kamilheree/rootway-agent"
   url "https://github.com/kamilheree/rootway-agent/releases/download/v1.0.0/rootway-agent.zip"
-  sha256 "99FDCA102E784E25F8B5653E9E9AC8FCC232663DE3BC7937227785B4987C6728"
+  sha256 "26dca3f3c6c159611bb646d2f8a06f7d87cf41eb4377f67c5e030618d3d41c"
   license "MIT"
   version "1.0.0"
 
