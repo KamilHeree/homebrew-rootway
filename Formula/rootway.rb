@@ -1,5 +1,5 @@
 class Rootway < Formula
-  desc "Rootway Agent - monitoring serwera i tunel WireGuard"
+  desc "Rootway Agent - monitoring serwera"
   homepage "https://github.com/kamilheree/homebrew-rootway"
   url "https://github.com/kamilheree/homebrew-rootway/releases/download/v1.0.0/rootway-agent.zip"
   sha256 "99FDCA102E784E25F8B5653E9E9AC8FCC232663DE3BC7937227785B4987C6728"
